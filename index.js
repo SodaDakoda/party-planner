@@ -71,9 +71,20 @@ function PartyDetails() {
   const $div = document.createElement("div");
   $div.classList.add("party-details");
 
+  // Format the date nicely
+  const formattedDate = new Date(selectedParty.date).toLocaleDateString(
+    undefined,
+    {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }
+  );
+
   $div.innerHTML = `
     <h3>${selectedParty.name} (ID: ${selectedParty.id})</h3>
-    <p><strong>Date:</strong> ${selectedParty.date}</p>
+    <p><strong>Date:</strong> ${formattedDate}</p>
     <p><strong>Location:</strong> ${selectedParty.location}</p>
     <p>${selectedParty.description}</p>
   `;
