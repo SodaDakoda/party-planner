@@ -7,15 +7,32 @@
  * @property {string} location
  */
 
+/**
+ * @typedef Guest
+ * @property {number} id
+ * @property {string} name
+ */
+
+/**
+ * @typedef RSVP
+ * @property {number} id
+ * @property {number} eventId
+ * @property {number} guestId
+ */
+
 // === Constants ===
 const BASE = "https://fsa-crud-2aa9294fe819.herokuapp.com/api";
 const COHORT = "2509-pt-mac";
 const RESOURCE = "/events";
 const API = `${BASE}/${COHORT}${RESOURCE}`;
+const GUESTS_API = `${BASE}/${COHORT}/guests`;
+const RSVPS_API = `${BASE}/${COHORT}/rsvps`;
 
 // === State ===
 let parties = [];
 let selectedParty;
+let guests = [];
+let rsvps = [];
 
 // === Fetch Functions ===
 async function getParties() {
@@ -39,12 +56,30 @@ async function getParty(id) {
   }
 }
 
+async function getGuestsAndRsvps() {
+  try {
+    const [guestsRes, rsvpsRes] = await Promise.all([
+      fetch(GUESTS_API),
+      fetch(RSVPS_API),
+    ]);
+    guests = (await guestsRes.json()).data;
+    rsvps = (await rsvpsRes.json()).data;
+  } catch (err) {
+    console.error("Error fetching guests or RSVPs:", err);
+  }
+}
+
 // === Components ===
 function PartyListItem(party) {
   const $li = document.createElement("li");
   const $a = document.createElement("a");
   $a.href = "#selected";
   $a.textContent = party.name;
+
+  if (selectedParty && selectedParty.id === party.id) {
+    $a.classList.add("selected"); // Highlight selected party
+  }
+
   $a.addEventListener("click", () => getParty(party.id));
   $li.appendChild($a);
   return $li;
@@ -82,11 +117,30 @@ function PartyDetails() {
     }
   );
 
+  // Get guests who RSVP'd
+  const partyRsvps = rsvps.filter((r) => r.eventId === selectedParty.id);
+  const partyGuests = partyRsvps.map((r) =>
+    guests.find((g) => g.id === r.guestId)
+  );
+
+  // Create guest list HTML
+  let guestHTML = "<p><strong>Guests RSVP'd:</strong></p>";
+  if (partyGuests.length > 0) {
+    guestHTML += "<ul>";
+    partyGuests.forEach((g) => {
+      guestHTML += `<li>${g.name}</li>`;
+    });
+    guestHTML += "</ul>";
+  } else {
+    guestHTML += "<p>No guests have RSVP'd yet.</p>";
+  }
+
   $div.innerHTML = `
     <h3>${selectedParty.name} (ID: ${selectedParty.id})</h3>
     <p><strong>Date:</strong> ${formattedDate}</p>
     <p><strong>Location:</strong> ${selectedParty.location}</p>
     <p>${selectedParty.description}</p>
+    ${guestHTML}
   `;
 
   return $div;
@@ -108,12 +162,13 @@ function render() {
       </section>
     </main>
   `;
+
   $app.querySelector("PartyList").replaceWith(PartyList());
   $app.querySelector("PartyDetails").replaceWith(PartyDetails());
 }
 
-// === Init ===
 async function init() {
+  await getGuestsAndRsvps();
   await getParties();
   render();
 }
